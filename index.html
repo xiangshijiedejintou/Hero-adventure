@@ -20,7 +20,6 @@
             width: 800px;
             height: 600px;
             position: relative;
-            /* 冒险岛风格背景：蓝天过渡到草地 */
             background: linear-gradient(to bottom, #87CEEB 0%, #bdf3ff 60%, #a8e67a 60%, #5cba3a 100%);
             border: 6px solid #f39c12;
             border-radius: 15px;
@@ -39,18 +38,20 @@
         .c2 { width: 100px; height: 35px; top: 80px; right: 150px; transform: scale(0.8); }
         .c2::before { content:''; position:absolute; width:50px; height:50px; background:white; border-radius:50%; top:-25px; left:20px; }
         
-        /* 角色图片（呼吸动画） */
+        /* 角色图片 - 🌟彻底解决遮挡问题 */
         #hero-img {
             position: absolute;
-            bottom: 150px;
-            left: 80px;
-            width: 220px; /* 调整角色大小 */
+            bottom: 300px; /* 大幅抬高 */
+            left: 50%;     /* 水平居中 */
+            transform: translateX(-50%); /* 配合水平居中 */
+            width: 180px;  /* 调整尺寸适配上半屏 */
             animation: breathe 2s infinite ease-in-out;
             filter: drop-shadow(5px 5px 5px rgba(0,0,0,0.3));
+            z-index: 3;    /* ⭐ 图层最高，绝对不会被对话框遮挡 */
         }
         @keyframes breathe {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
+            0%, 100% { transform: translate(-50%, 0); }
+            50% { transform: translate(-50%, -10px); }
         }
 
         /* 顶部状态栏 */
@@ -69,6 +70,7 @@
             font-size: 16px;
             font-weight: bold;
             text-shadow: 1px 1px 2px black;
+            z-index: 4; /* 状态栏保持最最上面 */
         }
         .stat span { color: #f1c40f; }
 
@@ -86,6 +88,7 @@
             box-sizing: border-box;
             color: white;
             box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            z-index: 2; /* 对话框在角色下面 */
         }
         #scene-text {
             font-size: 18px;
@@ -138,11 +141,9 @@
 <body>
 
 <div id="game-container">
-    <!-- 背景云朵 -->
     <div class="cloud c1"></div>
     <div class="cloud c2"></div>
 
-    <!-- 玩家属性面板 -->
     <div id="status-bar">
         <div class="stat">❤️ 血量: <span id="ui-hp">100</span></div>
         <div class="stat">🗡️ 攻击: <span id="ui-atk">10</span></div>
@@ -151,10 +152,9 @@
         <div class="stat">⏳ 进度: <span id="ui-prog">1</span>/5</div>
     </div>
 
-    <!-- 角色立绘 (请确保同一目录下有 hero.png) -->
+    <!-- 角色图层提至 z-index: 3 -->
     <img id="hero-img" src="hero.png" alt="白眼勇者" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'200\' height=\'200\'><rect width=\'200\' height=\'200\' fill=\'#ccc\'/><text x=\'50\' y=\'100\' fill=\'black\'>未找到hero.png</text></svg>'">
 
-    <!-- 底部对话交互框 -->
     <div id="dialog-box">
         <div id="scene-text">载入中...</div>
         <div id="options-container">
@@ -164,14 +164,8 @@
 </div>
 
 <script>
-    // 游戏核心数据变量
-    let hp = 100;
-    let eye = 0;
-    let gold = 0;
-    let progress = 1;
-    let isGameOver = false;
+    let hp = 100, eye = 0, gold = 0, progress = 1, isGameOver = false;
 
-    // 游戏剧情剧本 (5幕)
     const storyData = [
         {
             scene: "【第 1 幕】伴随着一阵刺眼的白光，你降生在“咕咕镇”广场。村长死死抓住你的肩膀：“天命的勇者啊！请拯救世界！”他硬塞给你一把沾着黏液的破铁剑。",
@@ -214,7 +208,6 @@
         }
     ];
 
-    // 更新界面数值
     function updateUI() {
         document.getElementById('ui-hp').innerText = Math.max(0, hp);
         document.getElementById('ui-eye').innerText = Math.min(100, eye);
@@ -222,42 +215,29 @@
         document.getElementById('ui-prog').innerText = Math.min(5, progress);
     }
 
-    // 漂浮文字特效
     function showFloatingText(text) {
         if (!text) return;
         const ft = document.createElement('div');
         ft.className = 'float-text';
         ft.innerText = text;
         ft.style.left = '350px';
-        ft.style.top = '300px';
+        ft.style.top = '250px'; /* 提示文字也抬高一点 */
         document.getElementById('game-container').appendChild(ft);
         setTimeout(() => ft.remove(), 1500);
     }
 
-    // 渲染当前剧情
     function renderScene() {
         updateUI();
         if (isGameOver) return;
 
         const sceneEl = document.getElementById('scene-text');
         const optsEl = document.getElementById('options-container');
-        optsEl.innerHTML = ''; // 清空旧按钮
+        optsEl.innerHTML = ''; 
 
-        // 结局判定检查
-        if (hp <= 0) {
-            triggerEnding('bad');
-            return;
-        }
-        if (eye >= 100) {
-            triggerEnding('true');
-            return;
-        }
-        if (progress > 5) {
-            triggerEnding('normal');
-            return;
-        }
+        if (hp <= 0) { triggerEnding('bad'); return; }
+        if (eye >= 100) { triggerEnding('true'); return; }
+        if (progress > 5) { triggerEnding('normal'); return; }
 
-        // 加载当前幕剧情
         const currentData = storyData[progress - 1];
         sceneEl.innerText = currentData.scene;
 
@@ -270,7 +250,6 @@
         });
     }
 
-    // 处理玩家选择
     function handleChoice(effect, msg) {
         hp += effect.hp;
         eye += effect.eye;
@@ -280,7 +259,6 @@
         renderScene();
     }
 
-    // 触发结局
     function triggerEnding(type) {
         isGameOver = true;
         const sceneEl = document.getElementById('scene-text');
@@ -288,7 +266,7 @@
         optsEl.innerHTML = '<button class="option-btn" onclick="location.reload()" style="text-align:center;">🔄 重新开始游戏</button>';
 
         if (type === 'bad') {
-            document.getElementById('hero-img').style.transform = 'rotate(90deg) translateY(50px)';
+            document.getElementById('hero-img').style.transform = 'translate(-50%, 0) rotate(90deg) translateY(50px)';
             sceneEl.innerHTML = `<span style="color:#ff4757; font-size:22px;">【扑街结局：累觉不爱】</span><br>你被怪物揍扁了。你翻着白眼倒在了地下城冰冷的地板上，内心毫无波澜，甚至懒得留下一句遗言。`;
         } 
         else if (type === 'true') {
@@ -300,7 +278,6 @@
         }
     }
 
-    // 游戏初始化启动
     renderScene();
 </script>
 </body>
